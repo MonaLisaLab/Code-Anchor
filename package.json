@@ -11,7 +11,6 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:code-anchor.addAnchor",
     "onView:codeAnchorView"
   ],
   "main": "./out/extension.js",
@@ -73,12 +72,14 @@
         {
           "command": "code-anchor.editAnchor",
           "when": "view == codeAnchorView",
-          "group": "inline"
+          "group": "inline",
+          "icon": "$(edit)"
         },
         {
           "command": "code-anchor.deleteAnchor",
           "when": "view == codeAnchorView",
-          "group": "inline"
+          "group": "inline",
+          "icon": "$(trash)"
         }
       ],
       "view/title": [

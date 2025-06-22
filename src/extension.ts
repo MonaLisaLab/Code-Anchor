@@ -29,6 +29,7 @@ function isStoredAnchor(obj: any): obj is StoredAnchor {
 export function activate(context: vscode.ExtensionContext) {
 
 	console.log('Congratulations, your extension "code-anchor" is now active! ⚓');
+	console.log('[Code Anchor] Activating extension...');
 
 	const ANCHOR_LIMIT = 20;
 
@@ -110,6 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
 		refreshTreeView();
 		vscode.window.showInformationMessage(`⚓ Anchor added!`);
 	});
+	console.log('[Code Anchor] "code-anchor.addAnchor" command registered.');
 
 	// 'jumpToAnchor' コマンドの実装
 	const jumpToAnchorCommand = vscode.commands.registerCommand('code-anchor.jumpToAnchor', async (anchor: Anchor) => {
@@ -124,6 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage('Could not open file. It may have been moved or deleted. 😢');
 		}
 	});
+	console.log('[Code Anchor] "code-anchor.jumpToAnchor" command registered.');
 
 	const deleteAnchorCommand = vscode.commands.registerCommand('code-anchor.deleteAnchor', (clickedAnchor: Anchor, selectedAnchors: Anchor[]) => {
 		const toDelete = selectedAnchors && selectedAnchors.length > 0 ? selectedAnchors : [clickedAnchor];
@@ -134,6 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
 		refreshTreeView();
 		vscode.window.showInformationMessage(`🗑️ ${toDelete.length} anchor(s) deleted!`);
 	});
+	console.log('[Code Anchor] "code-anchor.deleteAnchor" command registered.');
 
 	const editAnchorCommand = vscode.commands.registerCommand('code-anchor.editAnchor', async (anchor: Anchor) => {
 		const newLabel = await vscode.window.showInputBox({ prompt: "Enter a new label", value: anchor.label });
@@ -156,6 +160,7 @@ export function activate(context: vscode.ExtensionContext) {
 		refreshTreeView();
 		vscode.window.showInformationMessage(`✏️ Anchor updated!`);
 	});
+	console.log('[Code Anchor] "code-anchor.editAnchor" command registered.');
 
 	const onDidChangeActiveTextEditor = vscode.window.onDidChangeActiveTextEditor(editor => {
 		if (editor) {
@@ -196,11 +201,13 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.commands.executeCommand('setContext', 'codeAnchor:hasFilter', !!query);
 		}
 	});
+	console.log('[Code Anchor] "code-anchor.filterAnchors" command registered.');
 
 	const clearFilterCommand = vscode.commands.registerCommand('code-anchor.clearFilter', () => {
 		anchorProvider.filter('');
 		vscode.commands.executeCommand('setContext', 'codeAnchor:hasFilter', false);
 	});
+	console.log('[Code Anchor] "code-anchor.clearFilter" command registered.');
 
 	context.subscriptions.push(
 		addAnchorCommand,
@@ -218,6 +225,7 @@ export function activate(context: vscode.ExtensionContext) {
 	if (vscode.window.activeTextEditor) {
 		updateDecorations(vscode.window.activeTextEditor);
 	}
+	console.log('[Code Anchor] All commands and events pushed to subscriptions.');
 }
 
 export function deactivate() {} 
