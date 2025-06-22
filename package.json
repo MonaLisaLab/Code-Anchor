@@ -10,7 +10,10 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:code-anchor.addAnchor",
+    "onView:codeAnchorView"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
