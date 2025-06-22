@@ -55,11 +55,11 @@ export class AnchorProvider implements vscode.TreeDataProvider<Anchor>, vscode.T
 
   // --- Drag and Drop ---
 
-  handleDrag(source: readonly Anchor[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): void {
+  handleDrag(source: readonly Anchor[], dataTransfer: vscode.DataTransfer, _token: vscode.CancellationToken): void {
     dataTransfer.set(this.dropMimeTypes[0], new vscode.DataTransferItem(source.map(a => a.id)));
   }
 
-  handleDrop(target: Anchor | undefined, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): void {
+  handleDrop(target: Anchor | undefined, dataTransfer: vscode.DataTransfer, _token: vscode.CancellationToken): void {
     const transferItem = dataTransfer.get(this.dropMimeTypes[0]);
     if (!transferItem) { return; }
 
