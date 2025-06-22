@@ -69,9 +69,18 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	};
 
+	const onAnchorsChanged = (updatedAnchors: Anchor[]) => {
+		saveAnchors(updatedAnchors);
+		refreshTreeView();
+	};
+
 	let anchors = getAnchors();
-	const anchorProvider = new AnchorProvider(anchors);
-	const treeView = vscode.window.createTreeView('codeAnchorView', { treeDataProvider: anchorProvider });
+	const anchorProvider = new AnchorProvider(anchors, onAnchorsChanged);
+	const treeView = vscode.window.createTreeView('codeAnchorView', { 
+		treeDataProvider: anchorProvider,
+		dragAndDropController: anchorProvider,
+		canSelectMany: true
+	});
 
 	const refreshTreeView = () => {
 		anchors = getAnchors();
@@ -175,7 +184,24 @@ export function activate(context: vscode.ExtensionContext) {
 			refreshTreeView();
 		}
 	});
-	
+
+	const filterAnchorsCommand = vscode.commands.registerCommand('code-anchor.filterAnchors', async () => {
+		const query = await vscode.window.showInputBox({
+			prompt: "Filter anchors by label, note, or file path",
+			placeHolder: "e.g., 'bug', 'todo', 'extension.ts'"
+		});
+
+		if (query !== undefined) {
+			anchorProvider.filter(query);
+			vscode.commands.executeCommand('setContext', 'codeAnchor:hasFilter', !!query);
+		}
+	});
+
+	const clearFilterCommand = vscode.commands.registerCommand('code-anchor.clearFilter', () => {
+		anchorProvider.filter('');
+		vscode.commands.executeCommand('setContext', 'codeAnchor:hasFilter', false);
+	});
+
 	context.subscriptions.push(
 		addAnchorCommand,
 		jumpToAnchorCommand,
@@ -184,6 +210,8 @@ export function activate(context: vscode.ExtensionContext) {
 		onDidChangeActiveTextEditor,
 		onDidChangeTextDocument,
 		treeView,
+		filterAnchorsCommand,
+		clearFilterCommand,
 		...Object.values(decorationTypes)
 	);
 	

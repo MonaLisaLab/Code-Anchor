@@ -17,6 +17,28 @@
       {
         "command": "code-anchor.addAnchor",
         "title": "Add Code Anchor"
+      },
+      {
+        "command": "code-anchor.editAnchor",
+        "title": "Edit Anchor"
+      },
+      {
+        "command": "code-anchor.deleteAnchor",
+        "title": "Delete Anchor"
+      },
+      {
+        "command": "code-anchor.jumpToAnchor",
+        "title": "Jump to Anchor"
+      },
+      {
+        "command": "code-anchor.filterAnchors",
+        "title": "Filter Anchors",
+        "icon": "$(search)"
+      },
+      {
+        "command": "code-anchor.clearFilter",
+        "title": "Clear Filter",
+        "icon": "$(clear-all)"
       }
     ],
     "viewsContainers": {
@@ -54,6 +76,18 @@
           "command": "code-anchor.deleteAnchor",
           "when": "view == codeAnchorView",
           "group": "inline"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "code-anchor.filterAnchors",
+          "when": "view == codeAnchorView",
+          "group": "navigation"
+        },
+        {
+          "command": "code-anchor.clearFilter",
+          "when": "view == codeAnchorView && codeAnchor:hasFilter",
+          "group": "navigation"
         }
       ]
     }
