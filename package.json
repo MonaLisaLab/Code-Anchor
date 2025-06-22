@@ -76,6 +76,8 @@
     "typescript": "^5.4.5",
     "glob": "^10.3.12",
     "mocha": "^10.4.0",
-    "ts-loader": "^9.5.1"
+    "ts-loader": "^9.5.1",
+    "uuid": "^9.0.1",
+    "@types/uuid": "^9.0.8"
   }
 } 
