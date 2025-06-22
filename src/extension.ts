@@ -7,6 +7,7 @@ interface StoredAnchor {
 	label: string;
 	filePath: string;
 	lineNumber: number;
+	endLineNumber: number;
 	codeText: string;
 }
 
@@ -15,6 +16,7 @@ function isStoredAnchor(obj: any): obj is StoredAnchor {
 		   typeof obj.label === 'string' &&
 		   typeof obj.filePath === 'string' &&
 		   typeof obj.lineNumber === 'number' &&
+		   typeof obj.endLineNumber === 'number' &&
 		   typeof obj.codeText === 'string';
 }
 
@@ -22,62 +24,69 @@ export function activate(context: vscode.ExtensionContext) {
 
 	console.log('Congratulations, your extension "code-anchor" is now active! ⚓');
 
-	// Mementoからアンカーを復元
-	const storedAnchors: StoredAnchor[] = context.workspaceState.get('anchors', []);
-	const anchors: Anchor[] = storedAnchors
-		.filter(isStoredAnchor)
-		.map(anchor => new Anchor(
-			anchor.label,
-			vscode.TreeItemCollapsibleState.None,
-			anchor.filePath,
-			anchor.lineNumber,
-			anchor.codeText
-		));
-	
-	// TreeViewのプロバイダーを作成
-	const anchorProvider = new AnchorProvider(anchors);
+	const ANCHOR_LIMIT = 20;
 
-	// TreeViewを登録
-	vscode.window.registerTreeDataProvider('codeAnchorView', anchorProvider);
+	const getAnchors = (): Anchor[] => {
+		const stored: StoredAnchor[] = context.workspaceState.get('anchors', []);
+		return stored
+			.filter(isStoredAnchor)
+			.map(anchor => new Anchor(
+				anchor.label,
+				vscode.TreeItemCollapsibleState.None,
+				anchor.filePath,
+				anchor.lineNumber,
+				anchor.endLineNumber,
+				anchor.codeText
+			));
+	};
 
-
-	// 'addAnchor' コマンドの実装
-	const addAnchorCommand = vscode.commands.registerCommand('code-anchor.addAnchor', () => {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) {
-			vscode.window.showErrorMessage('No active editor found! 😢');
-			return;
-		}
-
-		const selection = editor.selection;
-		if (selection.isEmpty) {
-			vscode.window.showWarningMessage('Please select some code to create an anchor. 😉');
-			return;
-		}
-
-		const anchorText = editor.document.getText(selection).trim();
-		const filePath = editor.document.uri.fsPath;
-		const startLine = selection.start.line;
-
-		const newAnchor = new Anchor(
-			anchorText,
-			vscode.TreeItemCollapsibleState.None,
-			filePath,
-			startLine,
-			anchorText
-		);
-
-		anchors.push(newAnchor);
-		// Mementoに保存
-		context.workspaceState.update('anchors', anchors.map(a => ({
+	const saveAnchors = (anchors: Anchor[]) => {
+		const toStore: StoredAnchor[] = anchors.map(a => ({
 			label: a.label,
 			filePath: a.filePath,
 			lineNumber: a.lineNumber,
+			endLineNumber: a.endLineNumber,
 			codeText: a.codeText
-		})));
-		anchorProvider.refresh();
+		}));
+		context.workspaceState.update('anchors', toStore);
+	};
 
-		vscode.window.showInformationMessage(`⚓ Anchor added for: "${anchorText}"`);
+	let anchors = getAnchors();
+	const anchorProvider = new AnchorProvider(anchors);
+	vscode.window.registerTreeDataProvider('codeAnchorView', anchorProvider);
+
+	const refreshTreeView = () => {
+		anchors = getAnchors();
+		anchorProvider.load(anchors);
+	};
+
+	// 'addAnchor' コマンドの実装
+	const addAnchorCommand = vscode.commands.registerCommand('code-anchor.addAnchor', () => {
+		if (anchors.length >= ANCHOR_LIMIT) {
+			vscode.window.showWarningMessage(`You can only have up to ${ANCHOR_LIMIT} anchors. Please remove some to add new ones. 😢`);
+			return;
+		}
+
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) { return; }
+
+		const selection = editor.selection;
+		if (selection.isEmpty) { return; }
+
+		const newAnchor = new Anchor(
+			editor.document.getText(selection).trim(),
+			vscode.TreeItemCollapsibleState.None,
+			editor.document.uri.fsPath,
+			selection.start.line,
+			selection.end.line,
+			editor.document.getText(selection)
+		);
+
+		anchors.push(newAnchor);
+		saveAnchors(anchors);
+		refreshTreeView();
+
+		vscode.window.showInformationMessage(`⚓ Anchor added!`);
 	});
 
 	// 'jumpToAnchor' コマンドの実装
@@ -91,11 +100,61 @@ export function activate(context: vscode.ExtensionContext) {
 			editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
 		} catch (err) {
 			vscode.window.showErrorMessage('Could not open file. It may have been moved or deleted. 😢');
-			console.error(err);
 		}
 	});
 
-	context.subscriptions.push(addAnchorCommand, jumpToAnchorCommand);
+	const deleteAnchorCommand = vscode.commands.registerCommand('code-anchor.deleteAnchor', (anchor: Anchor) => {
+		const index = anchors.findIndex(a => a.label === anchor.label && a.filePath === anchor.filePath);
+		if (index !== -1) {
+			anchors.splice(index, 1);
+			saveAnchors(anchors);
+			refreshTreeView();
+			vscode.window.showInformationMessage(`🗑️ Anchor deleted!`);
+		}
+	});
+
+	const editAnchorCommand = vscode.commands.registerCommand('code-anchor.editAnchor', async (anchor: Anchor) => {
+		const newLabel = await vscode.window.showInputBox({
+			prompt: "Enter a new label for the anchor",
+			value: anchor.label
+		});
+
+		if (newLabel && newLabel !== anchor.label) {
+			anchor.label = newLabel;
+			saveAnchors(anchors);
+			refreshTreeView();
+			vscode.window.showInformationMessage(`✏️ Anchor updated!`);
+		}
+	});
+
+	const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument(event => {
+		const changedDocPath = event.document.uri.fsPath;
+		let needsUpdate = false;
+
+		for (const change of event.contentChanges) {
+			const linesDelta = (change.text.match(/\n/g) || []).length - (change.range.end.line - change.range.start.line);
+
+			anchors.forEach(anchor => {
+				if (anchor.filePath === changedDocPath && change.range.end.line < anchor.lineNumber) {
+					anchor.lineNumber += linesDelta;
+					needsUpdate = true;
+				}
+			});
+		}
+
+		if (needsUpdate) {
+			saveAnchors(anchors);
+			refreshTreeView();
+		}
+	});
+
+	context.subscriptions.push(
+		addAnchorCommand,
+		jumpToAnchorCommand,
+		deleteAnchorCommand,
+		editAnchorCommand,
+		onDidChangeTextDocument
+	);
 }
 
 export function deactivate() {} 

@@ -8,6 +8,11 @@ export class AnchorProvider implements vscode.TreeDataProvider<Anchor> {
 
   constructor(private anchors: Anchor[]) {}
 
+  load(anchors: Anchor[]): void {
+    this.anchors = anchors;
+    this._onDidChangeTreeData.fire();
+  }
+
   refresh(): void {
     this._onDidChangeTreeData.fire();
   }

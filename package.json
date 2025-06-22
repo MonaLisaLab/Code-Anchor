@@ -43,6 +43,18 @@
           "command": "code-anchor.addAnchor",
           "group": "navigation"
         }
+      ],
+      "view/item/context": [
+        {
+          "command": "code-anchor.editAnchor",
+          "when": "view == codeAnchorView",
+          "group": "inline"
+        },
+        {
+          "command": "code-anchor.deleteAnchor",
+          "when": "view == codeAnchorView",
+          "group": "inline"
+        }
       ]
     }
   },
